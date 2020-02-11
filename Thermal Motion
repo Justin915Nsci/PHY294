@@ -7,7 +7,7 @@ from scipy.optimize import curve_fit
 from scipy.stats import linregress 
 from scipy.stats import rayleigh
 #colin.brandys@mail.utoronto.ca
-
+import uncertaintiesLib
 
 dt = 1/2
 ptoum = 0.1155
@@ -57,6 +57,32 @@ def getD(fileName):
         dSqrVals += [getRSqr(dx,dy)]
 
     return dSqrVals
+
+def getdXdY(fileName):
+    xVals = []
+    yVals = []
+    fileObject = open(fileName,"r")
+    data = fileObject.readlines()
+    #print(data[3].strip().split("\t"))
+
+    for i in range(2,len(data),1):
+        temp = data[i].strip().split("\t")
+
+        xVals += [float(temp[0]) * ptoum]
+        yVals += [float(temp[1]) * ptoum]
+        
+    
+    initial = [xVals[0],yVals[0]]
+    dxVals = []
+    dyVals = []
+    for j in range(1,len(xVals),1):
+        dx = xVals[j] - initial[0]
+        dy = yVals[j] - initial[1]
+        dxVals +=[dx]
+        dyVals +=[dy]
+        
+        
+    return [dxVals,dyVals]
  
     
 def rayDist(r,Dt):
@@ -99,8 +125,8 @@ def getHist(data):
     big = (max(data))
     small = min(data)
     #cap = int(math.ceil(big / 1)) * 10
-    print(big)
-    print(small)
+    #print(big)
+    #print(small)
     binSize = big/50
     #bins = np.linspace(small,big,50)
     bins = np.linspace(small,big,50, endpoint = True)
@@ -113,19 +139,20 @@ def getHist(data):
     fig = plt.figure()
     ax = fig.add_axes([0,0,1,1])
 
-    n = ax.hist(data,bins = 55, density = True, color = 'red', edgecolor = 'black')
+    n = ax.hist(data,bins = 55, density = True, color = 'red', edgecolor = 'black', label = "Number of occurences per distance traveled")
     #normalized = n[0] 
     #x = np.linspace(rayleigh.pdf(0.0),rayleigh.pdf(1.2),len(data))
     x = np.linspace(0.0,1.2,50)
     #print(rayleigh.pdf(1.2))
     #y = rayleigh.pdf(x)
    # r = ax.plot(x,y,lw=2)
-    plt.title('S/O crodie colin')
-    plt.xlabel('d')
-    plt.ylabel('f')
+    #plt.title('S/O crodie colin')
+    plt.title("Distribution of Particle Step Distances on a -.5s Time Step")
+    plt.xlabel('Step Distances(\u03BCm)')
+    plt.ylabel('Number of occurences per step distance')
     
-    print("length x is " + str(len(x)))
-    print("length bins is " + str(len(bins)))
+    #print("length x is " + str(len(x)))
+    #print("length bins is " + str(len(bins)))
 
     
 
@@ -138,12 +165,17 @@ def getHist(data):
     #init_guess [1,1]
     fit = curve_fit(rayleigh,x,bins)
     ans,cov = fit
-    fit_D, fit_t = ans
-    ax.plot(x,rayleigh(x,fit_D,fit_t))
+    #fit_D, fit_t = ans
+    fit_D = ans
+    print("ans is " + str(ans))
+    print(fit_D)
+    #ax.plot(x,rayleigh(x,fit_D,fit_t))
+    ax.plot(x,rayleigh(x,fit_D), label = "Rayleigh Fit")
     plt.legend()
     plt.show()
     
-def rayleigh(r,D,t):
+def rayleigh(r,D):
+    t = 0.5
     return (r/(2*D*t))*np.exp(-(r*r)/(4*D*t))
     
 
@@ -182,21 +214,34 @@ timeVals = np.linspace(0,60,119)
 
 fig=plt.figure()
 ax = fig.add_axes([0,0,1,1])
-ax.scatter(timeVals,distanceSquared,color = 'r',marker = 'x')
+ax.scatter(timeVals,distanceSquared,color = 'r',marker = 'x', label = "Data Points")
 lineInfo = linregress(timeVals,distanceSquared)
 m, b, Rval = lineInfo[0],lineInfo[1],lineInfo[2]
-print("slope: %.2f, intercept: %.2f" %(m,b))
+#print("slope: %.2f, intercept: %.2f" %(m,b))
 yLine = timeVals*m + b 
 
-plt.plot(timeVals,yLine,'b')
+plt.plot(timeVals,yLine,'b', label = "Linear Fit")
 plt.xlabel('Time (s)')
-plt.ylabel("Distance Squared")
+plt.ylabel("Distance Squared( \u03BCm)")
 fig.suptitle("Distance Squared vs. Time")
 
 plt.grid(True)
 plt.rc('grid', linestyle=":", linewidth=1, color='gray')
 plt.tick_params(axis='both', which='major', labelsize=10)
 
-plt.legend()
+plt.errorbar(timeVals,distanceSquared,0.03, )
+
+plt.legend(loc='lower right')
 plt.show()
+
+
+# --------------------------------------------------------
+uXVals = np.linspace(0,0,119)
+uXVals = uXVals+np.sqrt(0.1*2)
+dxVals,dyVals = getdXdY(dataFile)
+
+
+
+print(dxVals)
+
 
