@@ -1,11 +1,202 @@
+
+import math
 import numpy as np 
-import matplotlib.pyplot as plot 
+
+import matplotlib.pyplot as plt 
 from scipy.optimize import curve_fit
+from scipy.stats import linregress 
+from scipy.stats import rayleigh
+#colin.brandys@mail.utoronto.ca
 
 
-fileObject = open("p1.txt","r")
+dt = 1/2
+ptoum = 0.1155
+#ptoum = 0.12034
+uPtoumn = 0.003
 
-data = []
-for line in fileObject:
-    line = float(line)*5 
-print(fileObject)
+
+def main():
+    time = []
+    t = 1
+    for i in range(0,119,1):
+        time = time +[t*dt]
+        t +=1
+
+    d1 = getD("p1.txt")
+
+    
+    x = time
+    y = d1
+    fig=plt.figure()
+    ax = fig.add_axes([0,0,1,1])
+    ax.scatter(time, d1, color= 'r')
+
+    plt.show()
+
+
+def getD(fileName):
+
+    xVals = []
+    yVals = []
+    fileObject = open(fileName,"r")
+    data = fileObject.readlines()
+    #print(data[3].strip().split("\t"))
+
+    for i in range(2,len(data),1):
+        temp = data[i].strip().split("\t")
+
+        xVals += [float(temp[0]) * ptoum]
+        yVals += [float(temp[1]) * ptoum]
+        
+
+    initial = [xVals[0],yVals[0]]
+    dSqrVals = []
+    for j in range(1,len(xVals),1):
+        dx = xVals[j] - initial[0]
+        dy = yVals[j] - initial[1]
+        dSqrVals += [getRSqr(dx,dy)]
+
+    return dSqrVals
+ 
+    
+def rayDist(r,Dt):
+    return (1/2*Dt)*np.exp(-(r*r)/4*Dt) 
+
+def getDt(fileName):
+    
+
+    xVals = []
+    yVals = []
+    fileObject = open(fileName,"r")
+    data = fileObject.readlines()
+
+    for i in range(2,len(data),1):
+        temp = data[i].strip().split("\t")
+        #print(type(temp))
+        xVals += [float(temp[0]) * ptoum]
+        yVals += [float(temp[1]) * ptoum]
+        
+    #print("yVals len is " + str(len(yVals)))
+    #print(yVals[0]/ptoum)
+    dSqrVals = []
+    for j in range(1,len(xVals),1):
+        dx = xVals[j] - xVals[j-1]
+        dy = yVals[j] - yVals[j-1]
+        dSqrVals += [getRSqr(dx,dy)]
+
+    return dSqrVals
+        
+def getRSqr(x,y):
+    r = (x*x + y*y)
+    r = round(r,2)
+    return r
+
+def getHist(data):
+
+    
+    #print("Distance Squared Values" + " " + str(data))
+    #print(data)
+    big = (max(data))
+    small = min(data)
+    #cap = int(math.ceil(big / 1)) * 10
+    print(big)
+    print(small)
+    binSize = big/50
+    #bins = np.linspace(small,big,50)
+    bins = np.linspace(small,big,50, endpoint = True)
+
+
+    for i in range(0,len(data),1):
+        temp = data[i-1]/binSize
+        idx = int(np.floor(temp))
+        bins[idx-1]+=1
+    fig = plt.figure()
+    ax = fig.add_axes([0,0,1,1])
+
+    n = ax.hist(data,bins = 55, density = True, color = 'red', edgecolor = 'black')
+    #normalized = n[0] 
+    #x = np.linspace(rayleigh.pdf(0.0),rayleigh.pdf(1.2),len(data))
+    x = np.linspace(0.0,1.2,50)
+    #print(rayleigh.pdf(1.2))
+    #y = rayleigh.pdf(x)
+   # r = ax.plot(x,y,lw=2)
+    plt.title('S/O crodie colin')
+    plt.xlabel('d')
+    plt.ylabel('f')
+    
+    print("length x is " + str(len(x)))
+    print("length bins is " + str(len(bins)))
+
+    
+
+    #x = data 
+    D = 1.535*10**(-12)
+    #y = rayDist(x,60*D) 
+
+    #optParams,covOptParams = curve_fit(rayDist,x,y)
+    #print(optParams,covOptParams)
+    #init_guess [1,1]
+    fit = curve_fit(rayleigh,x,bins)
+    ans,cov = fit
+    fit_D, fit_t = ans
+    ax.plot(x,rayleigh(x,fit_D,fit_t))
+    plt.legend()
+    plt.show()
+    
+def rayleigh(r,D,t):
+    return (r/(2*D*t))*np.exp(-(r*r)/(4*D*t))
+    
+
+#main()
+
+
+#dd= []
+#for i in range(1,2,1):
+#    tmp = getDt(("p"+str(i)+".txt"))
+#    dd += tmp
+
+dataFile = "p1.txt"
+
+pts = getDt(dataFile)
+
+def getKMaxLike(rsqs):
+    sumsq = 0
+    n = len(rsqs)
+    for i in rsqs:
+        sumsq += i
+    print(sumsq)
+    k = (10**(-11))*6*(np.pi)*0.93*(10**-3)*0.5*1.9*(10**-6)*sumsq/(2*n*296.5)
+    return k 
+
+print(getKMaxLike(pts))
+    
+
+
+getHist(pts)
+
+# --- Don't Use getDt here, it gives a weird graph --- #
+
+distanceSquared = getD(dataFile)
+
+timeVals = np.linspace(0,60,119)
+
+fig=plt.figure()
+ax = fig.add_axes([0,0,1,1])
+ax.scatter(timeVals,distanceSquared,color = 'r',marker = 'x')
+lineInfo = linregress(timeVals,distanceSquared)
+m, b, Rval = lineInfo[0],lineInfo[1],lineInfo[2]
+print("slope: %.2f, intercept: %.2f" %(m,b))
+yLine = timeVals*m + b 
+
+plt.plot(timeVals,yLine,'b')
+plt.xlabel('Time (s)')
+plt.ylabel("Distance Squared")
+fig.suptitle("Distance Squared vs. Time")
+
+plt.grid(True)
+plt.rc('grid', linestyle=":", linewidth=1, color='gray')
+plt.tick_params(axis='both', which='major', labelsize=10)
+
+plt.legend()
+plt.show()
+
