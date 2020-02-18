@@ -167,12 +167,27 @@ def getHist(data):
     ans,cov = fit
     #fit_D, fit_t = ans
     fit_D = ans
-    print("ans is " + str(ans))
+    std = np.sqrt(np.diag(cov))
+    #print("ans is " + str(ans))
     print(fit_D)
+    #print("std is" + str(std))
     #ax.plot(x,rayleigh(x,fit_D,fit_t))
     ax.plot(x,rayleigh(x,fit_D), label = "Rayleigh Fit")
     plt.legend()
     plt.show()
+    plt.close()
+    y = rayleigh(x,fit_D)
+    residuals = np.subtract(bins,y)
+    plt.scatter(np.linspace(0,50,50),residuals)
+    #plt.errorbar(np.linspace(0,119,119),residuals,uRsqrVals,0)
+    plt.plot(np.linspace(0,0,50))
+    plt.title("Distribution of Particle Step Distances on a -.5s Time Step")
+    plt.xlabel('Step Distances(\u03BCm)')
+    plt.ylabel('Number of occurences per step distance')
+   
+    plt.show()
+    plt.close()
+    
     
 def rayleigh(r,D):
     t = 0.5
@@ -200,7 +215,7 @@ def getKMaxLike(rsqs):
     k = (10**(-11))*6*(np.pi)*0.93*(10**-3)*0.5*1.9*(10**-6)*sumsq/(2*n*296.5)
     return k 
 
-print(getKMaxLike(pts))
+#print(getKMaxLike(pts))
     
 
 
@@ -219,7 +234,8 @@ lineInfo = linregress(timeVals,distanceSquared)
 m, b, Rval = lineInfo[0],lineInfo[1],lineInfo[2]
 #print("slope: %.2f, intercept: %.2f" %(m,b))
 yLine = timeVals*m + b 
-
+#print("y lines is " + str(yLine))
+#print("len yLines: " + str(len(yLine)))
 plt.plot(timeVals,yLine,'b', label = "Linear Fit")
 plt.xlabel('Time (s)')
 plt.ylabel("Distance Squared( \u03BCm)")
@@ -229,19 +245,34 @@ plt.grid(True)
 plt.rc('grid', linestyle=":", linewidth=1, color='gray')
 plt.tick_params(axis='both', which='major', labelsize=10)
 
-plt.errorbar(timeVals,distanceSquared,0.03, )
 
-plt.legend(loc='lower right')
-plt.show()
 
 
 # --------------------------------------------------------
 uXVals = np.linspace(0,0,119)
 uXVals = uXVals+np.sqrt(0.1*2)
 dxVals,dyVals = getdXdY(dataFile)
+uRsqrVals = []
+uRterm1 = np.multiply(np.square(uXVals),np.square(dxVals))
+uRterm2 = np.multiply(np.square(uXVals),np.square(dyVals))
+uRsqrVals = np.sqrt(8*(np.add(uRterm2,uRterm1)))
 
+#print(uRsqrVals)
 
+plt.errorbar(timeVals,distanceSquared, uRsqrVals,0.03)
 
-print(dxVals)
+plt.legend(loc='lower right')
+plt.show()
 
+plt.close()
+
+residuals = np.subtract(distanceSquared,yLine)
+plt.scatter(np.linspace(0,119,119),residuals)
+plt.errorbar(np.linspace(0,119,119),residuals,uRsqrVals,0)
+plt.plot(np.linspace(0,0,119))
+plt.xlabel('Time (s)')
+plt.ylabel("Distance Squared( \u03BCm)")
+plt.suptitle("Distance Squared vs. Time")
+plt.show()
+plt.close()
 
